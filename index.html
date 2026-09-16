@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width,
+                   initial-scale=1.0,
+                   maximum-scale=1.0,
+                   user-scalable=no">
+
+    <title>My WebAR Scanner</title>
+
+    <!-- A-Frame -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+
+    <!-- MindAR -->
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: black;
+        }
+
+        #startScreen {
+            position: fixed;
+            z-index: 9999;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+
+            background: #000;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        #startScreen h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        #startScreen p {
+            font-size: 16px;
+            margin: 10px 25px 25px;
+        }
+
+        #startButton {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            background: white;
+            color: black;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        #loading {
+            position: fixed;
+            z-index: 9998;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+
+            color: white;
+            background: rgba(0,0,0,0.65);
+            padding: 10px 15px;
+            border-radius: 6px;
+
+            font-family: Arial, sans-serif;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- START SCREEN -->
+    <div id="startScreen">
+
+        <h1>WebAR Scanner</h1>
+
+        <p>
+            Point your camera at the AR image
+            to play the video.
+        </p>
+
+        <button id="startButton">
+            START AR
+        </button>
+
+    </div>
+
+    <div id="loading">
+        Loading AR...
+    </div>
+
+
+    <!-- VIDEO -->
+    <video
+        id="arVideo"
+        src="video.mp4"
+        preload="auto"
+        loop
+        muted
+        playsinline
+        crossorigin="anonymous">
+    </video>
+
+
+    <!-- MINDAR / A-FRAME -->
+    <a-scene
+        mindar-image="
+            imageTargetSrc: targets.mind;
+            maxTrack: 1;
+            uiScanning: true;
+            uiLoading: true;
+            uiError: true;
+        "
+        color-space="sRGB"
+        renderer="
+            colorManagement: true;
+            physicallyCorrectLights: true;
+        "
+        vr-mode-ui="enabled: false"
+        device-orientation-permission-ui="enabled: false">
+
+        <!-- CAMERA -->
+        <a-camera
+            position="0 0 0"
+            look-controls="enabled: false">
+        </a-camera>
+
+
+        <!-- IMAGE TARGET -->
+        <a-entity
+            mindar-image-target="targetIndex: 0">
+
+            <!-- VIDEO ON TOP OF TARGET IMAGE -->
+            <a-video
+                src="#arVideo"
+                position="0 0 0"
+                width="1"
+                height="0.5625"
+                rotation="0 0 0">
+            </a-video>
+
+        </a-entity>
+
+    </a-scene>
+
+
+    <script>
+
+        const startScreen =
+            document.getElementById("startScreen");
+
+        const startButton =
+            document.getElementById("startButton");
+
+        const loading =
+            document.getElementById("loading");
+
+        const video =
+            document.getElementById("arVideo");
+
+        const scene =
+            document.querySelector("a-scene");
+
+        const target =
+            document.querySelector(
+                "[mindar-image-target]"
+            );
+
+
+        // START AR
+        startButton.addEventListener("click", async function () {
+
+            startScreen.style.display = "none";
+
+            loading.style.display = "block";
+
+            try {
+
+                // Prepare video
+                video.muted = true;
+                video.playsInline = true;
+
+                // Start MindAR
+                const mindarSystem =
+                    scene.systems["mindar-image-system"];
+
+                await mindarSystem.start();
+
+                loading.style.display = "none";
+
+            } catch (error) {
+
+                console.error(error);
+
+                loading.innerHTML =
+                    "Unable to start camera. Please allow camera permission.";
+
+            }
+
+        });
+
+
+        // TARGET FOUND
+        target.addEventListener("targetFound", function () {
+
+            console.log("AR image detected");
+
+            video.currentTime = 0;
+
+            video.play().catch(function(error) {
+
+                console.log(
+                    "Video autoplay prevented:",
+                    error
+                );
+
+            });
+
+        });
+
+
+        // TARGET LOST
+        target.addEventListener("targetLost", function () {
+
+            console.log("AR image lost");
+
+            video.pause();
+
+        });
+
+    </script>
+
+</body>
+</html>
